@@ -1,5 +1,18 @@
 #include "Reader.h"
+// inet_addr
+#include <arpa/inet.h>
 
+// For threading, link with lpthread
+#include <pthread.h>
+#include <semaphore.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <mysql.h>
+#include <cjson/cJSON.h>
+#include "thread_data.h"
 
 // Reader Function
 void* reader(void* param)

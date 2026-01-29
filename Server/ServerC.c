@@ -15,6 +15,7 @@
 #include <cjson/cJSON.h>
 #include "Writer.h"
 #include "Reader.h"
+#include "thread_data.h"
 
 
 //variabili globali_______________________________________________________________
@@ -27,7 +28,6 @@ int readercount = 0;
 MYSQL *conn;
 MYSQL_RES *res;
 MYSQL_ROW row;
-static char buffer[5120];
 //static char buffer_query[5120];
 
 //__________________________________________________________________________________________
@@ -98,26 +98,27 @@ int main()
         printf("%d",choice);
         
 
-        int *pclient = malloc(sizeof(int));
-        *pclient = newSocket;
         if (choice == 1) {
-           
-             
-            if (pthread_create(&readerthreads[i++], NULL,reader, (void*)(intptr_t)newSocket)!= 0)
+           // Crea thread LETTORE
+            ThreadParams *reader_params = malloc(sizeof(ThreadParams));
+            reader_params->sem_reader = &x;
+            reader_params->sem_writer = &y;
+            reader_params->newSocket = reader_socket;
+            if (pthread_create(&readerthreads[i++], NULL,reader, (void*)reader_params)!= 0)
 
                 // Error in creating thread
                 printf("Failed to create thread\n");
-                free(pclient);
         }
         else if (choice == 2) {
-            
+            // Crea thread SCRITTORE
+            ThreadParams *writer_params = malloc(sizeof(ThreadParams));
+            writer_params->sem_reader = &x;
+            writer_params->sem_writer = &y;
+            writer_params->newSocket = writer_socket;
             // Create writers thread
-            recv(newSocket,&buffer, sizeof(buffer), 0);
-             printf("%s",buffer);
-            if (pthread_create(&writerthreads[i++], NULL,writer, &newSocket)!= 0)
-
-                // Error in creating thread
-                printf("Failed to create thread\n");
+            if (pthread_create(&writerthreads[i++], NULL,writer, (void*)writer_params)!= 0)
+            // Error in creating thread
+            printf("Failed to create thread\n");
                 
         }
        

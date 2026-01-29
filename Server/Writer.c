@@ -1,15 +1,31 @@
 #include "Writer.h"
+// inet_addr
+#include <arpa/inet.h>
 
+// For threading, link with lpthread
+#include <pthread.h>
+#include <semaphore.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <mysql.h>
+#include <cjson/cJSON.h>
+#include "thread_data.h"
 
 // Writer Function
 void* writer(void* param)
 {
+    pthread_detach(pthread_self()); 
+    //int sockfd = (int)(intptr_t)param;
+    ThreadParams *p = (ThreadParams*)param;
     //______________________________
     cJSON *dato_json;
     //_______________________________
      char query_buffer[5120];
     //__________________________
-
+    char buffer[5120];
     char id_ard[5];
     char nome_client[50];
     char stato[8];
@@ -27,8 +43,10 @@ void* writer(void* param)
     // Lock the semaphore
     sem_wait(&y);
     printf("\nWriter has entered");
-// read the file contents into a string
+
      //_______________________________
+        recv(sockfd,&buffer, sizeof(buffer), 0);
+    printf("%s",buffer);
 
     // parse the JSON data
     cJSON *json = cJSON_Parse(buffer);
