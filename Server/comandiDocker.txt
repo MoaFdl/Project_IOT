@@ -1,0 +1,17 @@
+docker run -it --rm -v ${PWD}:/usr/src/app --add-host host.docker.internal:host-gateway -p 8989:8989 ambiente-c-mysql bash
+
+
+gcc ServerC.c Reader.c Writer.c -o server -lcjson -lpthread $(mysql_config --cflags) $(mysql_config --libs) && ./server
+
+
+ACCENDI IL DB PRIMA DI TUTTO SE NO NON FUNZIONA NULLA!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+
+
+
