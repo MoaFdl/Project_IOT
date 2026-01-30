@@ -25,14 +25,8 @@ pthread_t tid;
 pthread_t writerthreads[100];
 pthread_t readerthreads[100];
 int readercount = 0;
-MYSQL *conn;
-MYSQL_RES *res;
-MYSQL_ROW row;
-//static char buffer_query[5120];
 
 //__________________________________________________________________________________________
-
-
 
 // Driver Code
 int main()
@@ -51,23 +45,7 @@ int main()
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(8989);
 
-    
 
-    char *server = "host.docker.internal";
-    char *user = "root";      // Utente default di XAMPP
-    char *password = "";      // Password default di XAMPP (vuota)
-    char *database = "sensori";  // Database di prova spesso presente in XAMPP
-
- // 1. Inizializzazione
-    conn = mysql_init(NULL);
-
-    // 2. Connessione
-    if (!mysql_real_connect(conn, server, user, password, database, 0, NULL, 0)) {
-        fprintf(stderr, "%s\n", mysql_error(conn));
-        exit(1);
-    }
-
-    printf("Connessione al database riuscita!\n");
 
     // Bind the socket to the
     // address and port number.
@@ -101,9 +79,9 @@ int main()
         if (choice == 1) {
            // Crea thread LETTORE
             ThreadParams *reader_params = malloc(sizeof(ThreadParams));
-            reader_params->sem_reader = &x;
-            reader_params->sem_writer = &y;
-            reader_params->newSocket = reader_socket;
+            reader_params->x = &x;
+            reader_params->y = &y;
+            reader_params->newSocket = newSocket;
             if (pthread_create(&readerthreads[i++], NULL,reader, (void*)reader_params)!= 0)
 
                 // Error in creating thread
@@ -112,9 +90,9 @@ int main()
         else if (choice == 2) {
             // Crea thread SCRITTORE
             ThreadParams *writer_params = malloc(sizeof(ThreadParams));
-            writer_params->sem_reader = &x;
-            writer_params->sem_writer = &y;
-            writer_params->newSocket = writer_socket;
+            writer_params->x = &x;
+            writer_params->y = &y;
+            writer_params->newSocket = newSocket;
             // Create writers thread
             if (pthread_create(&writerthreads[i++], NULL,writer, (void*)writer_params)!= 0)
             // Error in creating thread
@@ -139,6 +117,6 @@ int main()
             i = 0;
         }
     }
-    mysql_close(conn);
+    
     return 0;
 }

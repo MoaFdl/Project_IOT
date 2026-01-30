@@ -17,6 +17,7 @@
 // Writer Function
 void* writer(void* param)
 {
+   // extern readercount;
     pthread_detach(pthread_self()); 
     //int sockfd = (int)(intptr_t)param;
     ThreadParams *p = (ThreadParams*)param;
@@ -38,14 +39,36 @@ void* writer(void* param)
     char timestamp[50];
 
     //____________________________________________
+    MYSQL *conn;
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+    //____________________________________________
+    char *server = "host.docker.internal";
+    char *user = "root";      // Utente default di XAMPP
+    char *password = "";      // Password default di XAMPP (vuota)
+    char *database = "sensori";  // Database di prova spesso presente in XAMPP
+
+    // 1. Inizializzazione
+        conn = mysql_init(NULL);
+
+    // 2. Connessione
+    if (!mysql_real_connect(conn, server, user, password, database, 0, NULL, 0)) {
+        fprintf(stderr, "%s\n", mysql_error(conn));
+        exit(1);
+    }
+
+    printf("Connessione al database riuscita!\n");
+    //____________________________________________
+
+
     printf("\nWriter is trying to enter");
 
     // Lock the semaphore
-    sem_wait(&y);
+    sem_wait(p->y);
     printf("\nWriter has entered");
 
      //_______________________________
-        recv(sockfd,&buffer, sizeof(buffer), 0);
+        recv(p->newSocket,&buffer, sizeof(buffer), 0);
     printf("%s",buffer);
 
     // parse the JSON data
@@ -59,13 +82,6 @@ void* writer(void* param)
          exit(1);
     }
 
-    // access the JSON data
-   /* dato_json = cJSON_GetObjectItemCaseSensitive(json, "nome");
-    if (cJSON_IsString(dato_json) && (dato_json->valuestring != NULL)) {
-        printf("Name: %s\n", dato_json->valuestring);
-    }*/
-
-    // delete the JSON object
     
     //_______________________________
     dato_json = cJSON_GetObjectItemCaseSensitive(json, "id");
@@ -130,8 +146,11 @@ void* writer(void* param)
     printf("Query 2 eseguite con successo.\n");
 
     // Unlock the semaphore
-    sem_post(&y);
+    sem_post(p->y);
 
     printf("\nWriter is leaving");
+    mysql_close(conn);
+     mysql_thread_end();
+    free(p);
     pthread_exit(NULL);
 }

@@ -7,6 +7,8 @@
 typedef struct {
     sem_t *x;  // Semaforo per sincronizzazione lettura/scrittura (es. readers-writers)
     sem_t *y;
+    int newSocket;
+    int readercount;
 } ThreadParams;
 
 #endif

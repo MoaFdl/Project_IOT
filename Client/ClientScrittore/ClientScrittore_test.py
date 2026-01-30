@@ -5,7 +5,7 @@ import time
 import json
 import datetime
 
-id_client= "7"
+id_client= "8"
 nome_client="cliente test5"
 stato_cli= "true"
 
@@ -32,7 +32,7 @@ def stampaDati():
     unita_misura="1"
     tipo_sensore = "0" 
     descrizione_ard="0"
-    misurazione_ard=["1","2"]
+    misurazione_ard=["testooooo"]
     timestamp_dato= datetime.datetime.now()
 
     StringaDict = {"id": id_client,
