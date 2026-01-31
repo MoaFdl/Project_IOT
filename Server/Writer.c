@@ -1,25 +1,12 @@
-#include "Writer.h"
-// inet_addr
-#include <arpa/inet.h>
-
-// For threading, link with lpthread
-#include <pthread.h>
-#include <semaphore.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <mysql.h>
-#include <cjson/cJSON.h>
+//external files___________________________________________________________
 #include "thread_data.h"
+#include "Writer.h"
+//_______________________________________________________________________
 
-// Writer Function
+// Writer 
 void* writer(void* param)
 {
-   // extern readercount;
     pthread_detach(pthread_self()); 
-    //int sockfd = (int)(intptr_t)param;
     ThreadParams *p = (ThreadParams*)param;
     //______________________________
     cJSON *dato_json;
@@ -38,52 +25,51 @@ void* writer(void* param)
     char *dato;
     char timestamp[50];
 
-    //____________________________________________
+    //______________________________________________________________________________
     MYSQL *conn;
     MYSQL_RES *res;
     MYSQL_ROW row;
-    //____________________________________________
+    //______________________________________________
     char *server = "host.docker.internal";
-    char *user = "root";      // Utente default di XAMPP
-    char *password = "";      // Password default di XAMPP (vuota)
-    char *database = "sensori";  // Database di prova spesso presente in XAMPP
+    char *user = "root";     
+    char *password = "";      
+    char *database = "sensori";  
 
     // 1. Inizializzazione
         conn = mysql_init(NULL);
 
     // 2. Connessione
-    if (!mysql_real_connect(conn, server, user, password, database, 0, NULL, 0)) {
+    if (!mysql_real_connect(conn, server, user, password, database, 0, NULL, 0)) 
+    {
         fprintf(stderr, "%s\n", mysql_error(conn));
         exit(1);
     }
 
     printf("Connessione al database riuscita!\n");
-    //____________________________________________
-
+    //__________________________________________________________________________
 
     printf("\nWriter is trying to enter");
-
-    // Lock the semaphore
     sem_wait(p->y);
     printf("\nWriter has entered");
 
      //_______________________________
-        recv(p->newSocket,&buffer, sizeof(buffer), 0);
+    recv(p->newSocket,&buffer, sizeof(buffer), 0);
     printf("%s",buffer);
 
     // parse the JSON data
     cJSON *json = cJSON_Parse(buffer);
-    if (json == NULL) {
+    if (json == NULL) 
+    {
         const char *error_ptr = cJSON_GetErrorPtr();
-        if (error_ptr != NULL) {
+        if (error_ptr != NULL) 
+        {
             printf("Error: %s\n", error_ptr);
         }
         cJSON_Delete(json);
-         exit(1);
+        exit(1);
     }
-
     
-    //_______________________________
+    //__________________________________________________________________
     dato_json = cJSON_GetObjectItemCaseSensitive(json, "id");
     strcpy(id_ard,dato_json->valuestring);
     dato_json = cJSON_GetObjectItemCaseSensitive(json, "nome");
@@ -96,7 +82,7 @@ void* writer(void* param)
     strcpy(descrizione,dato_json->valuestring);
     dato_json = cJSON_GetObjectItemCaseSensitive(json, "misura");
     strcpy(unita_misura,dato_json->valuestring);
-    //_________________________________________
+    //_________________________________________________________________
    
     dato_json = cJSON_GetObjectItemCaseSensitive(json, "nota");
     strcpy(note,dato_json->valuestring);
@@ -104,25 +90,27 @@ void* writer(void* param)
     strcpy(timestamp,dato_json->valuestring);
    
     dato_json = cJSON_GetObjectItemCaseSensitive(json, "dato");
-    if (cJSON_IsArray(dato_json)) {
+    if (cJSON_IsArray(dato_json)) 
+    {
         // Converte ["1","2",...] in una stringa grezza "[\"1\",\"2\",...]"
         dato= cJSON_PrintUnformatted(dato_json);
-    } else if (cJSON_IsString(dato_json)) {
+    } else if (cJSON_IsString(dato_json)) 
+    {
         // Caso di backup se arrivasse come stringa normale
         // Dobbiamo duplicarla per poterla liberare con free() dopo allo stesso modo
         dato = strdup(dato_json->valuestring);
-    } else {
+    } else 
+    {
         dato = strdup("[]"); // Default array vuoto
     }
 
-
     cJSON_Delete(json);
     //____________________________________________
-   strcpy(query_buffer,"");
+    strcpy(query_buffer,"");
    
     sprintf(query_buffer, 
     "INSERT INTO arduino (id, nome_client, stato, tipo_sensore, descrizione, unita_misura) "
-    "VALUES ('%s', '%s', '%s', '%s', '%s', '%s') " // <--- Assumo 'stato' sia stringa, ho aggiunto apici
+    "VALUES ('%s', '%s', '%s', '%s', '%s', '%s') " 
     "ON DUPLICATE KEY UPDATE "
     "nome_client = VALUES(nome_client), "
     "stato = VALUES(stato), "
@@ -131,7 +119,8 @@ void* writer(void* param)
     "unita_misura = VALUES(unita_misura)", 
     id_ard, nome_client, stato, tipo_sensore, descrizione, unita_misura);
 
-        if (mysql_query(conn, query_buffer)) {
+    if (mysql_query(conn, query_buffer)) 
+    {
         fprintf(stderr, "%s\n", mysql_error(conn));
     }
 
@@ -139,18 +128,17 @@ void* writer(void* param)
     strcpy(query_buffer,"");
     sprintf(query_buffer, "INSERT INTO misurazioni VALUES(NULL,'%s','%s','%s','%s')", id_ard, note, dato, timestamp);
     
-    if (mysql_query(conn, query_buffer)) {
+    if (mysql_query(conn, query_buffer)) 
+    {
         fprintf(stderr, "%s\n", mysql_error(conn));
     }
-
     printf("Query 2 eseguite con successo.\n");
-
-    // Unlock the semaphore
+   
     sem_post(p->y);
 
     printf("\nWriter is leaving");
     mysql_close(conn);
-     mysql_thread_end();
+    mysql_thread_end();
     free(p);
     pthread_exit(NULL);
 }

@@ -1,38 +1,35 @@
 // C program for the Server Side
-
-// inet_addr
+//librerie_______________________________________________________________
+//socket
 #include <arpa/inet.h>
-
-// For threading, link with lpthread
+#include <sys/socket.h>
+// For threading
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <unistd.h>
-#include <mysql.h>
-#include <cjson/cJSON.h>
+//_______________________________________________________________________
+
+//external files
 #include "Writer.h"
 #include "Reader.h"
 #include "thread_data.h"
 
 
 //variabili globali_______________________________________________________________
-// Semaphore variables
-sem_t x, y;
+sem_t x, y; // Semaphore variables
 pthread_t tid;
 pthread_t writerthreads[100];
 pthread_t readerthreads[100];
 int readercount = 0;
 
-//__________________________________________________________________________________________
-
-// Driver Code
 int main()
 {
-    // Initialize variables
-    int serverSocket, newSocket;
+    
+    int serverSocket; 
+    int newSocket;
     struct sockaddr_in serverAddr;
     struct sockaddr_storage serverStorage;
 
@@ -45,19 +42,18 @@ int main()
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(8989);
 
-
-
-    // Bind the socket to the
-    // address and port number.
+    // Bind the socket to the address and port number.
     bind(serverSocket,(struct sockaddr*)&serverAddr,sizeof(serverAddr));
 
-    // Listen on the socket,
-    // with 40 max connection
-    // requests queued
+    // Listen on the socket,with 40 max connection requests queued
     if (listen(serverSocket, 50) == 0)
+    {
         printf("Listening\n");
+    }   
     else
+    {
         printf("Error\n");
+    }   
 
     // Array for thread
     pthread_t tid[60];
@@ -67,56 +63,46 @@ int main()
     while (1) {
         addr_size = sizeof(serverStorage);
 
-        // Extract the first
-        // connection in the queue
+        // Extract the first connection in the queue
         newSocket = accept(serverSocket,(struct sockaddr*)&serverStorage, &addr_size);
-        //
         int choice = 0;
         recv(newSocket,&choice, sizeof(choice), 0);
         printf("%d",choice);
+
+        ThreadParams *T_params = malloc(sizeof(ThreadParams));
+        T_params->x = &x;
+        T_params->y = &y;
+        T_params->newSocket = newSocket;
         
-
         if (choice == 1) {
-           // Crea thread LETTORE
-            ThreadParams *reader_params = malloc(sizeof(ThreadParams));
-            reader_params->x = &x;
-            reader_params->y = &y;
-            reader_params->newSocket = newSocket;
-            if (pthread_create(&readerthreads[i++], NULL,reader, (void*)reader_params)!= 0)
-
-                // Error in creating thread
-                printf("Failed to create thread\n");
+           // Crea reader
+            if (pthread_create(&readerthreads[i++], NULL,reader, (void*)T_params)!= 0)
+            {
+                printf("Failed to create reader\n");
+            }
+                
         }
         else if (choice == 2) {
-            // Crea thread SCRITTORE
-            ThreadParams *writer_params = malloc(sizeof(ThreadParams));
-            writer_params->x = &x;
-            writer_params->y = &y;
-            writer_params->newSocket = newSocket;
-            // Create writers thread
-            if (pthread_create(&writerthreads[i++], NULL,writer, (void*)writer_params)!= 0)
-            // Error in creating thread
-            printf("Failed to create thread\n");
-                
+            // Crea writer
+            if (pthread_create(&writerthreads[i++], NULL,writer, (void*)T_params)!= 0)
+            {
+                printf("Failed to create writer\n");
+            }
         }
        
         if (i >= 50) {
-            // Update i
+
             i = 0;
 
-            while (i < 50) {
-                // Suspend execution of
-                // the calling thread
-                // until the target
-                // thread terminates
+            while (i < 50) 
+            {
+                // Suspend execution of the calling thread until the target thread terminates
                 pthread_join(writerthreads[i++],NULL);
                 pthread_join(readerthreads[i++],NULL);
             }
 
-            // Update i
             i = 0;
         }
     }
-    
     return 0;
 }
